@@ -1,0 +1,39 @@
+# Elasticsearch
+es:
+  clusterName: "fess-es"
+  nodeGroup: ""
+
+  roles:
+    master: "true"
+    ingest: "true"
+    data: "true"
+  
+  replicas: 2
+  minimumMasterNodes: 2
+
+  image: "codelibs/fess-elasticsearch"
+  imageTag: "7.7"
+  imagePullPolicy: "IfNotPresent"
+
+  esJavaOpts: "-Xmx1g -Xms1g"
+
+  networkHost: "0.0.0.0"
+
+  protocol: http
+  httpPort: 9200
+  transportPort: 9300
+
+  updateStrategy: RollingUpdate
+
+  sysctlVmMaxMapCount: 262144
+
+# Fess
+fess:
+  image: "codelibs/fess"
+  imageTag: "13.7"
+  imagePullPolicy: "IfNotPresent"
+
+  httpPort: 8080
+  targetPort: 8080
+  containerPort: 8080
+  

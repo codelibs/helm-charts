@@ -1,0 +1,172 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fess-es
+  labels:
+    release: "my-release"
+    app: "fess-es"
+spec:
+  serviceName: fess-es-headless
+  selector:
+    matchLabels:
+      app: "fess-es"
+  replicas: {{ .Values.es.replicas }}
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: {{ .Values.es.updateStrategy }}
+  volumeClaimTemplates:
+  - metadata:
+      name: esdata
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+  - metadata:
+      name: esdictionary
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+  template:
+    metadata:
+      name: "fess-es"
+      labels:    
+        app: "fess-es"
+      annotations:
+
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+#      affinity:
+#        podAntiAffinity:
+#          requiredDuringSchedulingIgnoredDuringExecution:
+#          - labelSelector:
+#              matchExpressions:
+#              - key: app
+#                operator: In
+#                values:
+#                - "fess-es"
+#            topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 120
+      volumes:
+      - name: esdata
+        persistentVolumeClaim:
+          claimName: esdata
+      - name: esdictionary
+        persistentVolumeClaim:
+          claimName: esdictionary
+      initContainers:
+      - name: configure-sysctl
+        securityContext:
+          runAsUser: 0
+          privileged: true        
+        image: "{{ .Values.es.image }}:{{ .Values.es.imageTag }}"
+        imagePullPolicy: "{{ .Values.es.imagePullPolicy }}"
+        command: ["sysctl", "-w", "vm.max_map_count={{ .Values.es.sysctlVmMaxMapCount}}"]
+        resources:
+          {}
+
+      containers:
+      - name: "fess-es"
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+          # readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+        image: "{{ .Values.es.image }}:{{ .Values.es.imageTag }}"
+        imagePullPolicy: "{{ .Values.es.imagePullPolicy }}"
+        readinessProbe:          
+          exec:
+            command:
+              - sh
+              - -c
+              - |
+                #!/usr/bin/env bash -e
+                # If the node is starting up wait for the cluster to be ready (request params: 'wait_for_status=green&timeout=1s' )
+                # Once it has started only check that the node itself is responding
+                START_FILE=/tmp/.es_start_file
+
+                if [ -n "${ELASTIC_USERNAME}" ] && [ -n "${ELASTIC_PASSWORD}" ]; then
+                  BASIC_AUTH="-u ${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}"
+                else
+                  BASIC_AUTH=''
+                fi
+
+                if [ -f "${START_FILE}" ]; then
+                  echo 'Elasticsearch is already running, lets check the node is healthy'
+                  HTTP_CODE=$(curl -XGET -s -k ${BASIC_AUTH} -o /dev/null -w '%{http_code}' http://127.0.0.1:9200/)
+                  RC=$?
+                  if [[ ${RC} -ne 0 ]]; then
+                    echo "curl -XGET -s -k \${BASIC_AUTH} -o /dev/null -w '%{http_code}' http://127.0.0.1:9200/ failed with RC ${RC}"
+                    exit ${RC}
+                  fi
+                  # ready if HTTP code 200, 503 is tolerable if ES version is 6.x
+                  if [[ ${HTTP_CODE} == "200" ]]; then
+                    exit 0
+                  elif [[ ${HTTP_CODE} == "503" && "7" == "6" ]]; then
+                    exit 0
+                  else
+                    echo "curl -XGET -s -k \${BASIC_AUTH} -o /dev/null -w '%{http_code}' http://127.0.0.1:9200/ failed with HTTP code ${HTTP_CODE}"
+                    exit 1
+                  fi
+
+                else
+                  echo 'Waiting for elasticsearch cluster to become ready (request params: "wait_for_status=green&timeout=1s" )'
+                  if curl -XGET -s -k --fail ${BASIC_AUTH} http://127.0.0.1:9200/_cluster/health?wait_for_status=green&timeout=1s ; then
+                    touch ${START_FILE}
+                    exit 0
+                  else
+                    echo 'Cluster is not yet ready (request params: "wait_for_status=green&timeout=1s" )'
+                    exit 1
+                  fi
+                fi
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 3
+          timeoutSeconds: 5
+        ports:
+        - name: http
+          containerPort: 9200
+        - name: transport
+          containerPort: 9300
+        resources:
+          requests:
+            cpu: "1000m"
+            memory: "2Gi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+        env:
+          - name: node.name
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: cluster.initial_master_nodes
+            value: "fess-es-0,fess-es-1,"
+          - name: discovery.zen.minimum_master_nodes
+            value: "{{ .Values.es.minimumMasterNodes }}"
+          - name: discovery.seed_hosts
+            value: "fess-es-headless"
+          - name: cluster.name
+            value: "fess-es"
+          - name: FESS_DICTIONARY_PATH
+            value: /usr/share/elasticsearch/config/dictionary
+          - name: network.host
+            value: "{{ .Values.networkHost }}"
+          - name: ES_JAVA_OPTS
+            value: "{{ .Values.esJavaOpts }}"
+          {{- range $role, $enabled := .Values.roles }}
+          - name: node.{{ $role }}
+            value: "{{ $enabled }}"
+          {{- end }}
+        volumeMounts:
+          - name: "esdata"
+            mountPath: /usr/share/elasticsearch/data
+          - name: "esdictionary"
+            mountPath: /usr/share/elasticsearch/config/dictionary

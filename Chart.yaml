@@ -1,0 +1,11 @@
+apiVersion: v2
+description: Official helm chart for Fess
+home: https://github.com/codelibs/helm-charts
+name: fess
+version: 13.7
+appVersion: 13.7
+keywords:
+  - fess
+  - elasticsearch 
+sources:
+  - https://github.com/codelibs/fess
