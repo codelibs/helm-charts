@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,7 +12,6 @@ spec:
   selector:
     matchLabels:
       app: fess
-  strategy: {}
   template:
     metadata:
       labels:
@@ -30,6 +30,8 @@ spec:
         image: "{{ .Values.fess.image }}:{{ .Values.fess.imageTag }}"
         imagePullPolicy: "{{ .Values.fess.imagePullPolicy }}"
         env:
+        - name: TZ
+          value: "{{ .Values.timezone }}"
         - name: ES_HTTP_URL
           value: "http://fess-es:{{ .Values.es.httpPort }}"
         - name: FESS_DICTIONARY_PATH
@@ -40,7 +42,7 @@ spec:
         - containerPort: {{ .Values.fess.containerPort }}
         resources: {}
         volumeMounts:
-#      restartPolicy: Always
+      # restartPolicy: Always
       serviceAccountName: ""
-      volumes: 
+      volumes:
 status: {}

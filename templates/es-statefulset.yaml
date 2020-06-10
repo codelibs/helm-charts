@@ -1,9 +1,9 @@
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: fess-es
   labels:
-    release: "my-release"
     app: "fess-es"
 spec:
   serviceName: fess-es-headless
@@ -18,21 +18,15 @@ spec:
   - metadata:
       name: esdata
     spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 100Mi
+{{ toYaml .Values.es.esdata.volumeClaimTemplate | indent 6 }}
   - metadata:
       name: esdictionary
     spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 100Mi
+{{ toYaml .Values.es.esdictionary.volumeClaimTemplate | indent 6 }}
   template:
     metadata:
       name: "fess-es"
-      labels:    
+      labels:
         app: "fess-es"
       annotations:
 
@@ -40,16 +34,23 @@ spec:
       securityContext:
         fsGroup: 1000
         runAsUser: 1000
-#      affinity:
-#        podAntiAffinity:
-#          requiredDuringSchedulingIgnoredDuringExecution:
-#          - labelSelector:
-#              matchExpressions:
-#              - key: app
-#                operator: In
-#                values:
-#                - "fess-es"
-#            topologyKey: kubernetes.io/hostname
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: {{ .Values.es.antiAffinityTopologyKey }}
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - "fess-es"
+
+    {{- with .Values.es.nodeAffinity }}
+        nodeAffinity:
+{{ toYaml . | indent 10 }}
+    {{- end }}
       terminationGracePeriodSeconds: 120
       volumes:
       - name: esdata
@@ -62,7 +63,7 @@ spec:
       - name: configure-sysctl
         securityContext:
           runAsUser: 0
-          privileged: true        
+          privileged: true
         image: "{{ .Values.es.image }}:{{ .Values.es.imageTag }}"
         imagePullPolicy: "{{ .Values.es.imagePullPolicy }}"
         command: ["sysctl", "-w", "vm.max_map_count={{ .Values.es.sysctlVmMaxMapCount}}"]
@@ -80,7 +81,7 @@ spec:
           runAsUser: 1000
         image: "{{ .Values.es.image }}:{{ .Values.es.imageTag }}"
         imagePullPolicy: "{{ .Values.es.imagePullPolicy }}"
-        readinessProbe:          
+        readinessProbe:
           exec:
             command:
               - sh
@@ -132,17 +133,14 @@ spec:
           timeoutSeconds: 5
         ports:
         - name: http
-          containerPort: 9200
+          containerPort: {{ .Values.es.httpPort }}
         - name: transport
-          containerPort: 9300
+          containerPort: {{ .Values.es.transportPort }}
         resources:
-          requests:
-            cpu: "1000m"
-            memory: "2Gi"
-          limits:
-            cpu: "1000m"
-            memory: "2Gi"
+{{ toYaml .Values.resources | indent 10 }}
         env:
+          - name: TZ
+            value: "{{ .Values.timezone }}"
           - name: node.name
             valueFrom:
               fieldRef:

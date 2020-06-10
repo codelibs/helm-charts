@@ -1,3 +1,7 @@
+---
+# General
+timezone: Asia/Tokyo
+
 # Elasticsearch
 es:
   clusterName: "fess-es"
@@ -17,7 +21,31 @@ es:
 
   esJavaOpts: "-Xmx1g -Xms1g"
 
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "1Gi"
+    limits:
+      cpu: "100m"
+      memory: "1Gi"
+
   networkHost: "0.0.0.0"
+
+  esdata:
+    volumeClaimTemplate:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+  esdictionary:
+    volumeClaimTemplate:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+
+  antiAffinityTopologyKey: "kubernetes.io/hostname"
+  nodeAffinity: {}
 
   protocol: http
   httpPort: 9200
@@ -36,4 +64,3 @@ fess:
   httpPort: 8080
   targetPort: 8080
   containerPort: 8080
-  
