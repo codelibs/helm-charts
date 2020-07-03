@@ -6,7 +6,7 @@ The official Fess Helm Charts repository.
 
 ### Requirements
 
-* Helm >=3.0.0
+* Helm >=2.0.0
 * Kubernetes >=1.8
 
 ### Install Charts
@@ -19,26 +19,28 @@ TODO.
 
   ```
   git clone git@github.com:codelibs/helm-charts.git
-  helm install fess ./helm-charts/
+  helm install my-release ./helm-charts/
+  ```
+
+#### KIND(Kubernetes IN Docker)
+
+  ```
+  git clone git@github.com:codelibs/helm-charts.git
+  helm install my-release -f ./helm-charts/kind/values.yaml ./helm-charts/
   ```
 
 ### Usage
 
-Setting up a port forward, you can now access http://localhost:8080 :tada:!
-```
-kubectl port-forward svc/fess 8080
-```
+Setting up a port forward, you can now access http://localhost:8080 :tada:
+  
+  ```
+  kubectl port-forward svc/my-release-fess 8080
+  ```
 
 ### Uninstall Charts
 
   ```
-  helm uninstall fess
-  ```
-
-### Delete Persistent Volumes
-
-  ```
-  kubectl delete pvc -l app=fess-es
+  helm uninstall my-release
   ```
 
 ## License

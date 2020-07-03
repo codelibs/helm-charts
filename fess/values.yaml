@@ -1,0 +1,49 @@
+---
+elasticsearchHost: "http://elasticsearch-client:9200"
+
+replicas: 1
+
+image: "codelibs/fess"
+imageTag: "13.8"
+imagePullPolicy: "IfNotPresent"
+
+# additionals labels
+labels: {}
+
+podAnnotations: {}
+
+resources:
+  requests:
+    cpu: "1000m"
+    memory: "2Gi"
+  limits:
+    cpu: "1000m"
+    memory: "2Gi"
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  # readOnlyRootFilesystem: true
+  runAsUser: 0
+  privileged: true
+
+serviceAccount: ""
+
+httpPort: 8080
+targetPort: 8080
+containerPort: 8080
+
+updateStrategy:
+  type: "Recreate"
+
+timezone: Asia/Tokyo
+
+service:
+  type: ClusterIP
+  port: 8080
+  nodePort: ""
+  labels: {}
+
+nameOverride: ""
+fullnameOverride: ""

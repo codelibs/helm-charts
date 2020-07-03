@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "fess.fullname" . }}
+  labels: {{ include "fess.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+{{ toYaml .Values.updateStrategy | indent 4 }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        release: {{ .Release.Name | quote }}
+        {{- range $key, $value := .Values.labels }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      annotations:
+        {{- range $key, $value := .Values.podAnnotations }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+
+    spec:
+      containers:
+      - name: fess
+        securityContext:
+{{ toYaml .Values.securityContext | indent 10 }}
+        image: "{{ .Values.image }}:{{ .Values.imageTag }}"
+        imagePullPolicy: "{{ .Values.imagePullPolicy }}"
+        env:
+        - name: TZ
+          value: "{{ .Values.timezone }}"
+        - name: ES_HTTP_URL
+          value: "{{ .Values.elasticsearchHost }}"
+        - name: FESS_DICTIONARY_PATH
+          value: /usr/share/elasticsearch/config/dictionary/
+        - name: RUN_ELASTICSEARCH
+          value: "false"
+        ports:
+        - containerPort: {{ .Values.httpPort }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        volumeMounts:
+      serviceAccountName: {{ .Values.serviceAccount }}
+      volumes:
+status: {}

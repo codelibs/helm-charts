@@ -53,7 +53,7 @@ secretMounts: []
 #    defaultMode: 0755
 
 image: "codelibs/fess-elasticsearch"
-imageTag: "7.7.1"
+imageTag: "7.8.0"
 imagePullPolicy: "IfNotPresent"
 
 podAnnotations: {}
@@ -168,7 +168,7 @@ transportPort: 9300
 service:
   labels: {}
   labelsHeadless: {}
-  type: ClusterIP
+  type: NodePort
   nodePort: ""
   annotations: {}
   httpPortName: http
