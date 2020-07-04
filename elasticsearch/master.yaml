@@ -53,7 +53,7 @@ secretMounts: []
 #    defaultMode: 0755
 
 image: "codelibs/fess-elasticsearch"
-imageTag: "7.7.1"
+imageTag: "7.8.0"
 imagePullPolicy: "IfNotPresent"
 
 podAnnotations: {}

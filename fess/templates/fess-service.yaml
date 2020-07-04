@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "fess.fullname" . }}
+  labels: {{ include "fess.labels" . | nindent 4 }}
+{{- if .Values.service.labels }}
+{{ toYaml .Values.service.labels | indent 4}}
+{{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - port: {{ .Values.service.port }}
+{{- if .Values.service.nodePort }}
+    nodePort: {{ .Values.service.nodePort }}
+{{- end }}
+    name: http
+    targetPort: {{ .Values.httpPort }}
+  selector:
+    app: {{ .Chart.Name }}
+    release: {{ .Release.Name | quote }}
